@@ -55,6 +55,16 @@ def run_commands(cmd):
         daemon=True
     ).start()
 
+def is_valid_file(path):
+    if path.startswith("Editor"):
+        return False
+
+    if path.startswith("ShaderA") or path.startswith("ShaderT"):
+        if path.find(f"JPB_Chunk{chunk_id[0]}") < 0:
+            return False
+
+    return True
+
 def create_paklist(base_path,path):
     ret = ""
     for file in os.listdir(path):
@@ -65,9 +75,8 @@ def create_paklist(base_path,path):
             relative_path = os.path.relpath(full_path, start=base_path)
             
             
-            if relative_path.startswith("ShaderA") or relative_path.startswith("ShaderT"):
-                if relative_path.find(f"JPB_Chunk{chunk_id[0]}") < 0:
-                    continue
+            if not is_valid_file(relative_path):
+                continue
 
             ret += f"\"{full_path}\" " + "\"" + "../../../JPB/Content/" + relative_path.replace("\\","/") + "\" -compress" + "\n"
 
@@ -88,11 +97,9 @@ def check_done(delta_time):
             current_step[0] = 1
             is_done[0] = False
             on_complete()
-            print("on complete")
         elif current_step[0] == 1:
             unreal.unregister_slate_post_tick_callback(check_done_handle[0])
             is_done[1] = True
-            print("on done")
         else:
             has_error[0] = True
 
@@ -135,10 +142,6 @@ def on_complete():
     run_commands(cmd)
 
 def update_assetlabel(chunkId):
-    # asset_data = unreal.EditorAssetLibrary.find_asset_data()
-    # if asset_data is None:
-    #     has_error[0] = True
-    #     return
     asset = unreal.EditorAssetLibrary.load_asset("/Game/ModAssetLabel.ModAssetLabel")
     if asset is None:
         has_error[0] = True
@@ -150,7 +153,29 @@ def update_assetlabel(chunkId):
         return
     rules.set_editor_property("chunk_id",chunkId)
     unreal.EditorAssetLibrary.save_loaded_asset(asset)
-    
+
+def update_static_mesh(mesh):
+
+    mesh.set_editor_property("generate_mesh_distance_field",True)
+
+    body_setup = mesh.get_editor_property("body_setup")
+    body_setup.set_editor_property("collision_trace_flag",unreal.CollisionTraceFlag.CTF_USE_COMPLEX_AS_SIMPLE)
+    body_setup.set_editor_property("double_sided_geometry",True)
+
+    nanite_settings = mesh.get_editor_property("nanite_settings")
+    nanite_settings.set_editor_property("enabled",False)
+
+
+def fix_static_meshs():
+    asset_paths = unreal.EditorAssetLibrary.list_assets("/Game/Mods")
+    for path in asset_paths:
+        asset_data = unreal.EditorAssetLibrary.find_asset_data(path)
+        if asset_data.asset_class_path.asset_name == "StaticMesh":
+            mesh = unreal.EditorAssetLibrary.load_asset(path)
+            update_static_mesh(mesh)
+
+    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(save_map_packages=False, save_content_packages=True)
+
 def cook_pak_only(chunkId,pakName):
     current_step[0] = 0
     is_done[1] = False
@@ -160,6 +185,7 @@ def cook_pak_only(chunkId,pakName):
         update_assetlabel(chunkId)
         if has_error[0]:
             return
+        fix_static_meshs()
         check_done_handle[0] = unreal.register_slate_post_tick_callback(check_done)
         pak_name[0] = pakName
         chunk_id[0] = chunkId
@@ -187,4 +213,3 @@ def cook_pak_only(chunkId,pakName):
         run_commands(cmd)
     except Exception as e:
         has_error[0] = True
-
