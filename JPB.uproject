@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{32A73E30-4E67-D9F3-7162-82AD0AB52701}",
+	"EngineAssociation": "5.7",
 	"Category": "",
 	"Description": "",
 	"Plugins": [
@@ -9,24 +9,6 @@
 			"Enabled": false,
 			"TargetAllowList": [
 				"Editor"
-			]
-		},
-		{
-			"Name": "InterchangeEditor",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Win64",
-				"Linux",
-				"Mac"
-			]
-		},
-		{
-			"Name": "Interchange",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Win64",
-				"Linux",
-				"Mac"
 			]
 		},
 		{
